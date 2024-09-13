@@ -59,7 +59,10 @@ Header:  Authorization: Bearer <token>
 <br />
 Header:  Authorization: Bearer <token>
 <br /><br />
-
+•	URL: GET   on     api/users/train/:trainName
+<br />
+Header:  Authorization: Bearer <token>
+<br /><br />
 •	URL: POST   on     api/users/book-ticket/:trainId/:seatNo
 <br />
 Header:  Authorization: Bearer <token>
