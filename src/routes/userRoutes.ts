@@ -22,6 +22,12 @@ interface Seats {
   // ie., Key can be any string.... but Value can be either not booked/booked
 }
 
+interface TrainQueryParams {
+  page?: string;       
+  pageSize?: string;
+}
+
+/*
 // Display all Trains
 router.get('/trains', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -80,6 +86,42 @@ router.get('/trains', async (req, res) => {
     res.status(500).end();
   });
 });
+*/
+
+
+// Display Trains according to Pagination
+
+// GET /trains?page=<pageNumber>&pageSize=<pageSize>
+router.get('/trains', async (req: Request<{}, {}, {}, TrainQueryParams>, res: Response) => {
+  try {
+    // Get pagination parameters from the query string
+    const page = parseInt(req.query.page as string) || 1;           // Default to page 1 if not provided
+    const pageSize = parseInt(req.query.pageSize as string) || 10;  // Default page size if not provided
+
+    const totalTrains = await prisma.train.count();
+    const totalPages = Math.ceil(totalTrains / pageSize);
+
+    // Fetch the trains data with pagination
+    const trains = await prisma.train.findMany({
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    // Send paginated response
+    res.status(200).json({
+      trains: trains,
+      page: page,
+      pageSize: pageSize,
+      totalPages: totalPages,
+      totalTrains: totalTrains,
+    });
+
+  } catch (error) {
+    console.error('Error fetching trains:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 
 // Display Ticket details for a particular Train

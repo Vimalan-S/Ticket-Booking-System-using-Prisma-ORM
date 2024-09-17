@@ -9,53 +9,98 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import express from 'express';
 import prisma from '../prisma.js';
-import { PassThrough } from 'stream';
 const router = express.Router();
+/*
 // Display all Trains
+router.get('/trains', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+
+  const stream = new PassThrough();  // PassTHrough is part of stream, that simply passes the data
+  res.setHeader('Transfer-Encoding', 'chunked');
+  
+  // Stream the opening bracket of a JSON array
+  stream.write('[');
+
+  let isFirstChunk = true;
+  let page = 0;
+  const pageSize = 50;  // Adjust batch size depending on the dataset
+
+  try {
+    let hasMoreData = true;
+    
+    while (hasMoreData) {
+      const trains = await prisma.train.findMany({
+        skip: page * pageSize,
+        take: pageSize,
+      });
+
+      // At the end, a particular chunk will have no data... stop then
+      if (trains.length === 0) {
+        hasMoreData = false;
+        break;
+      }
+
+      // control came here => There is some data present in the chunk, Add comma before each new chunk except for the first one
+      if (!isFirstChunk) {
+        stream.write(',');
+      }
+
+      // Stream the current batch of trains as a JSON string
+      stream.write(JSON.stringify(trains));
+
+      isFirstChunk = false;
+      page++;
+    }
+
+    // Stream the closing bracket of a JSON array
+    stream.end(']');
+    
+  } catch (error) {
+    console.error('Error setting up stream:', error);
+    stream.end('[]');  // Return an empty array in case of error
+    res.status(500).end();
+  }
+
+  // Pipe the response stream to the client
+  stream.pipe(res);
+
+  stream.on('error', (error) => {
+    console.error('Stream error:', error);
+    res.status(500).end();
+  });
+});
+*/
+// Display Trains according to Pagination
+// GET /trains?page=<pageNumber>&pageSize=<pageSize>
 router.get('/trains', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.setHeader('Content-Type', 'application/json');
-    const stream = new PassThrough(); // PassTHrough is part of stream, that simply passes the data
-    res.setHeader('Transfer-Encoding', 'chunked');
-    // Stream the opening bracket of a JSON array
-    stream.write('[');
-    let isFirstChunk = true;
-    let page = 0;
-    const pageSize = 50; // Adjust batch size depending on the dataset
     try {
-        let hasMoreData = true;
-        while (hasMoreData) {
-            const trains = yield prisma.train.findMany({
-                skip: page * pageSize,
-                take: pageSize,
-            });
-            // At the end, a particular chunk will have no data... stop then
-            if (trains.length === 0) {
-                hasMoreData = false;
-                break;
-            }
-            // control came here => There is some data present in the chunk, Add comma before each new chunk except for the first one
-            if (!isFirstChunk) {
-                stream.write(',');
-            }
-            // Stream the current batch of trains as a JSON string
-            stream.write(JSON.stringify(trains));
-            isFirstChunk = false;
-            page++;
-        }
-        // Stream the closing bracket of a JSON array
-        stream.end(']');
+        // Get pagination parameters from the query string
+        const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+        const pageSize = parseInt(req.query.pageSize) || 10; // Default page size if not provided
+        // Calculate how many items to skip (for pagination)
+        const skip = (page - 1) * pageSize;
+        // Fetch the trains data with pagination
+        const trains = yield prisma.train.findMany({
+            skip: skip,
+            take: pageSize,
+        });
+        // Get total count of trains (for calculating total pages)
+        const totalTrains = yield prisma.train.count();
+        // Calculate total pages
+        const totalPages = Math.ceil(totalTrains / pageSize);
+        // Send paginated response
+        res.status(200).json({
+            trains: trains,
+            page: page,
+            pageSize: pageSize,
+            totalPages: totalPages,
+            totalTrains: totalTrains,
+        });
     }
     catch (error) {
-        console.error('Error setting up stream:', error);
-        stream.end('[]'); // Return an empty array in case of error
-        res.status(500).end();
+        console.error('Error fetching trains:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-    // Pipe the response stream to the client
-    stream.pipe(res);
-    stream.on('error', (error) => {
-        console.error('Stream error:', error);
-        res.status(500).end();
-    });
 }));
 // Display Ticket details for a particular Train
 router.get('/tickets/:trainid', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
