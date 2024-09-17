@@ -66,7 +66,7 @@ Header:  Authorization: Bearer <token>
 •	URL: POST   on     api/users/book-ticket/:trainId/:seatNo
 <br />
 Header:  Authorization: Bearer <token>
-<br />
+<br /><br />
 •	URL: GET   on     api/users/tickets/:trainId
 <br />
 Header:  Authorization: Bearer <token>
