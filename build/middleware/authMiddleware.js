@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import compression from 'compression';
 // Middleware to verify JWT and extract user info
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -29,4 +30,8 @@ const isAdmin = (req, res, next) => {
     }
     next();
 };
-export { authenticateToken, isAdmin };
+const compressTrainsRoute = compression({
+    level: 6, // Compression level (0-9, 9 being best compression but slowest)
+    threshold: '1kb', // Only compress responses that are at least 1KB in size
+});
+export { authenticateToken, isAdmin, compressTrainsRoute };

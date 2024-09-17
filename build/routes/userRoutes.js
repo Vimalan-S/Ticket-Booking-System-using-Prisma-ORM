@@ -9,7 +9,75 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import express from 'express';
 import prisma from '../prisma.js';
+import { PassThrough } from 'stream';
 const router = express.Router();
+// Display all Trains
+router.get('/trains', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    res.setHeader('Content-Type', 'application/json');
+    const stream = new PassThrough(); // PassTHrough is part of stream, that simply passes the data
+    res.setHeader('Transfer-Encoding', 'chunked');
+    // Stream the opening bracket of a JSON array
+    stream.write('[');
+    let isFirstChunk = true;
+    let page = 0;
+    const pageSize = 50; // Adjust batch size depending on the dataset
+    try {
+        let hasMoreData = true;
+        while (hasMoreData) {
+            const trains = yield prisma.train.findMany({
+                skip: page * pageSize,
+                take: pageSize,
+            });
+            // At the end, a particular chunk will have no data... stop then
+            if (trains.length === 0) {
+                hasMoreData = false;
+                break;
+            }
+            // control came here => There is some data present in the chunk, Add comma before each new chunk except for the first one
+            if (!isFirstChunk) {
+                stream.write(',');
+            }
+            // Stream the current batch of trains as a JSON string
+            stream.write(JSON.stringify(trains));
+            isFirstChunk = false;
+            page++;
+        }
+        // Stream the closing bracket of a JSON array
+        stream.end(']');
+    }
+    catch (error) {
+        console.error('Error setting up stream:', error);
+        stream.end('[]'); // Return an empty array in case of error
+        res.status(500).end();
+    }
+    // Pipe the response stream to the client
+    stream.pipe(res);
+    stream.on('error', (error) => {
+        console.error('Stream error:', error);
+        res.status(500).end();
+    });
+}));
+// Display Ticket details for a particular Train
+router.get('/tickets/:trainid', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { trainid } = req.params;
+    if (!trainid) {
+        res.status(400).json("Enter valid Train number");
+        return;
+    }
+    try {
+        const tickets = yield prisma.ticket.findMany({
+            where: {
+                trainid: parseInt(trainid, 10)
+            }
+        });
+        res.status(200).json({ message: "Sold Tickets: ", tickets });
+    }
+    catch (err) {
+        console.error("Error fetching Ticket details ", err);
+        res.status(500).json({ message: 'Error fetching Ticket details ', err });
+        ;
+    }
+}));
 // Read all users
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -26,7 +94,7 @@ router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     const { id } = req.params;
     try {
         const user = yield prisma.user.findUnique({
-            where: { userid: parseInt(id, 10) } // , 10 to make sure that the string id: "35" is interpreted as a Decimal number 35
+            where: { userid: parseInt(id, 10) }, // , 10 to make sure that the string id: "35" is interpreted as a Decimal number 35
         });
         if (!user)
             return res.status(404).json({ message: 'User not found.' });

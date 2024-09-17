@@ -1,12 +1,13 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from './prisma.js'; 
+import prisma from './prisma.js';    // NOTE!  Mention .js compulsory...
 
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 import { authenticateToken, isAdmin } from './middleware/authMiddleware.js';
+import compression from 'compression';
 
 // Define types for request body
 interface RegisterRequestBody {
@@ -24,6 +25,7 @@ interface LoginRequestBody {
 
 const app = express();
 app.use(express.json());
+app.use(compression());
 
 // Registration route
 app.post('/register', async (req: Request<{}, {}, RegisterRequestBody>, res: Response) => {

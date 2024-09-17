@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload, VerifyErrors } from 'jsonwebtoken';
+import compression from 'compression';
 
 // Define types for the JWT payload
 interface UserPayload extends JwtPayload {
@@ -49,4 +50,14 @@ const isAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
   next();
 };
 
-export { authenticateToken, isAdmin };
+const compressTrainsRoute = compression({
+  level: 6, // Compression level (0-9, 9 being best compression but slowest)
+  threshold: '1kb', // Only compress responses that are at least 1KB in size
+});
+
+
+export { authenticateToken, isAdmin, compressTrainsRoute };
+
+
+
+

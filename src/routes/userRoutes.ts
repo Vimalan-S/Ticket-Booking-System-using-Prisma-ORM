@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import prisma from '../prisma.js';
 import { Gender, Role } from '@prisma/client';      // bcz I have given them as Enums in prisma.schema
+import { PassThrough } from 'stream';
 
 const router = express.Router();
 
@@ -21,6 +22,92 @@ interface Seats {
   // ie., Key can be any string.... but Value can be either not booked/booked
 }
 
+// Display all Trains
+router.get('/trains', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+
+  const stream = new PassThrough();  // PassTHrough is part of stream, that simply passes the data
+  res.setHeader('Transfer-Encoding', 'chunked');
+  
+  // Stream the opening bracket of a JSON array
+  stream.write('[');
+
+  let isFirstChunk = true;
+  let page = 0;
+  const pageSize = 50;  // Adjust batch size depending on the dataset
+
+  try {
+    let hasMoreData = true;
+    
+    while (hasMoreData) {
+      const trains = await prisma.train.findMany({
+        skip: page * pageSize,
+        take: pageSize,
+      });
+
+      // At the end, a particular chunk will have no data... stop then
+      if (trains.length === 0) {
+        hasMoreData = false;
+        break;
+      }
+
+      // control came here => There is some data present in the chunk, Add comma before each new chunk except for the first one
+      if (!isFirstChunk) {
+        stream.write(',');
+      }
+
+      // Stream the current batch of trains as a JSON string
+      stream.write(JSON.stringify(trains));
+
+      isFirstChunk = false;
+      page++;
+    }
+
+    // Stream the closing bracket of a JSON array
+    stream.end(']');
+    
+  } catch (error) {
+    console.error('Error setting up stream:', error);
+    stream.end('[]');  // Return an empty array in case of error
+    res.status(500).end();
+  }
+
+  // Pipe the response stream to the client
+  stream.pipe(res);
+
+  stream.on('error', (error) => {
+    console.error('Stream error:', error);
+    res.status(500).end();
+  });
+});
+
+
+// Display Ticket details for a particular Train
+router.get('/tickets/:trainid' , async (req: Request<{trainid: string}>, res: Response) => {
+  
+  const {trainid} = req.params;
+  
+  if(!trainid){
+    res.status(400).json("Enter valid Train number");
+    return;
+  }
+
+  try{
+    const tickets = await prisma.ticket.findMany(
+      {
+        where: {
+          trainid: parseInt(trainid, 10)
+        }
+      }
+    );
+    res.status(200).json({message: "Sold Tickets: ", tickets})
+  }catch(err){
+    console.error("Error fetching Ticket details ", err);
+    res.status(500).json({ message: 'Error fetching Ticket details ', err });;
+  }
+})
+
+
 // Read all users
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -38,7 +125,7 @@ router.get('/:id', async (req: Request<UserIdParams>, res: Response) => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { userid: parseInt(id, 10) }   // , 10 to make sure that the string id: "35" is interpreted as a Decimal number 35
+      where: { userid: parseInt(id, 10) },  // , 10 to make sure that the string id: "35" is interpreted as a Decimal number 35
     });
 
     if (!user) return res.status(404).json({ message: 'User not found.' });
@@ -116,6 +203,8 @@ router.get('/train/:trainName', async (req: Request<{ trainName: string }>, res:
     res.status(500).json({ message: 'Error Fetching Train Data.', error });
   }
 });
+
+
 
 // Get available seats for a train
 router.get('/seats/:trainid', async (req: Request<{ trainid: string }>, res: Response) => {

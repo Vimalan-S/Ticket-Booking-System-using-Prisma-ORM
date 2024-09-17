@@ -10,12 +10,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from './prisma.js';
+import prisma from './prisma.js'; // NOTE!  Mention .js compulsory...
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { authenticateToken, isAdmin } from './middleware/authMiddleware.js';
+import compression from 'compression';
 const app = express();
 app.use(express.json());
+app.use(compression());
 // Registration route
 app.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, password, role, mobilenumber, gender } = req.body;

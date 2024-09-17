@@ -27,3 +27,5 @@ const fetchData = async (): Promise<void> => {
 
 // Run the fetchData function
 fetchData();
+
+
